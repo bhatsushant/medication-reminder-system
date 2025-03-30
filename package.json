@@ -1,0 +1,29 @@
+{
+  "name": "medication-reminder-system",
+  "version": "1.0.0",
+  "description": "A Medication Reminder System to integrate and manage real-time communication technologies using Twilio, specifically focusing on TTS (Text-to-Speech) and STT (Speech-to-Text) to interact with patients about their medication schedules",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "express.js",
+    "node.js",
+    "typescript"
+  ],
+  "author": "Sushant Bhat",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongodb": "^6.15.0",
+    "vitest": "^3.0.9",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.1",
+    "typescript": "^5.8.2"
+  }
+}
