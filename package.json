@@ -4,7 +4,11 @@
   "description": "A Medication Reminder System to integrate and manage real-time communication technologies using Twilio, specifically focusing on TTS (Text-to-Speech) and STT (Speech-to-Text) to interact with patients about their medication schedules",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node dist/server.js",
+    "dev": "nodemon --transpile-only src/index.ts",
+    "build": "tsc",
+    "lint": "eslint . --ext .ts",
+    "format": "prettier --write ."
   },
   "keywords": [
     "express.js",
@@ -17,13 +21,22 @@
   "dependencies": {
     "axios": "^1.8.4",
     "dotenv": "^16.4.7",
+    "elevenlabs": "^1.55.0",
     "express": "^4.21.2",
     "mongodb": "^6.15.0",
+    "twilio": "^5.5.1",
     "vitest": "^3.0.9",
+    "winston": "^3.17.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
+    "@types/node": "^22.13.14",
+    "@types/twilio": "^3.19.2",
+    "eslint": "^9.23.0",
+    "nodemon": "^3.1.9",
+    "prettier": "^3.5.3",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }
 }
