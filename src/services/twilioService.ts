@@ -10,11 +10,12 @@ export const makeCall = async (phoneNumber: string) => {
       to: phoneNumber,
       from: config.twilio.phoneNumber,
       method: "GET",
-      twiml: `<Response><Say>${config.twilio.reminderMessage}</Say></Response>`,
+      twiml: `<Response><Gather input="speech dtmf" timeout="3" numDigits="1"><Say voice="alice">${config.twilio.reminderMessage}</Say></Gather></Response>`,
       statusCallback:
-        "https://22d1-73-10-124-67.ngrok-free.app/webhook/twilio/call-status", // Webhook to capture call events
+        "https://22d1-73-10-124-67.ngrok-free.app/webhooks/twilio/call-status", // Webhook to capture call events
       statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-      statusCallbackMethod: "POST"
+      statusCallbackMethod: "POST",
+      record: true
     });
 
     logger.info(`Call initiated: ${call.sid}`);

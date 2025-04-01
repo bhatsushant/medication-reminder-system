@@ -4,6 +4,8 @@ import webhookRoutes from "./routes/webhookRoutes";
 
 const app = express();
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 app.use("/api", callRoutes);
 app.use("/webhooks", webhookRoutes);
 

@@ -26,6 +26,12 @@ export const handleCallStatus = async (req: Request, res: Response) => {
 };
 
 export const handleIncomingCall = async (req: Request, res: Response) => {
+  console.log("REQUEST BODY", req.body);
+  const { CallSid, CallStatus, RecordingUrl, To } = req.body;
+
+  logger.info(
+    `Twilio Call Update - CallSid: ${CallSid}, Status: ${CallStatus}`
+  );
   const response = `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Say voice="alice">Hello, this is a reminder from your healthcare provider. Have you taken your Aspirin, Cardivol, and Metformin today?</Say>
