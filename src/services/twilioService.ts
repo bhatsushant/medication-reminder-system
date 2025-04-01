@@ -10,7 +10,8 @@ export const makeCall = async (phoneNumber: string) => {
       to: phoneNumber,
       from: config.twilio.phoneNumber,
       method: "GET",
-      twiml: `<Response><Gather input="speech dtmf" timeout="3" numDigits="1"><Say voice="alice">${config.twilio.reminderMessage}</Say></Gather></Response>`,
+      //   twiml: `<Response><Gather input="speech dtmf" timeout="3" numDigits="1"><Say voice="alice">${config.twilio.reminderMessage}</Say></Gather></Response>`,
+      twiml: `<Response><Say voice="alice">${config.twilio.reminderMessage}</Say><Record maxLength="30" playBeep="true" /></Response>`,
       statusCallback:
         "https://22d1-73-10-124-67.ngrok-free.app/webhooks/twilio/call-status", // Webhook to capture call events
       statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
