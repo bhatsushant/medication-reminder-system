@@ -1,5 +1,6 @@
 import app from "./app";
 import logger from "./config/logger";
+import "./services/webSocketServer";
 
 const PORT = process.env.PORT || 3000;
 

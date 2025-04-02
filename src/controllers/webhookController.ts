@@ -28,15 +28,18 @@ export const handleCallStatus = async (req: Request, res: Response) => {
 
 export const handleIncomingCall = async (req: Request, res: Response) => {
   console.log("REQUEST BODY", req.body);
-  const { CallSid, CallStatus } = req.body;
+  const { CallSid } = req.body;
 
-  logger.info(
-    `Twilio Call Update - CallSid: ${CallSid}, Status: ${CallStatus}`
-  );
+  logger.info(`Incoming call received - CallSid: ${CallSid}`);
+
   const response = `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
-      <Say voice="alice">${config.twilio.reminderMessage}</Say>
-    </Response>`;
+  <Say voice="alice">${config.twilio.reminderMessage}</Say>
+  <Start>
+    <Stream url="wss://22d1-73-10-124-67.ngrok-free.app/twilio" track="both_tracks" />
+  </Start>
+</Response>
+`;
 
   res.set("Content-Type", "text/xml");
   res.send(response);
