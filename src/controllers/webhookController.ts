@@ -1,79 +1,163 @@
 import { Request, Response } from "express";
+import twilio from "twilio";
+import WebSocket from "ws";
 import logger from "../config/logger";
-import { transcribeAudio } from "../services/stt";
-import { sendSMS } from "../services/twilioService";
 import { config } from "../config/env";
 
-export const handleCallStatus = async (req: Request, res: Response) => {
-  console.log("REQUEST BODY", req.body);
-  const { CallSid, CallStatus, RecordingUrl, To } = req.body;
+/**
+ * Handles TwiML generation for outgoing medication reminder calls
+ */
+export const handleOutgoingCall = (req: Request, res: Response): void => {
+  const { AnsweredBy } = req.body;
 
-  logger.info(
-    `Twilio Call Update - CallSid: ${CallSid}, Status: ${CallStatus}`
+  console.log("AnsweredBy", AnsweredBy);
+  const twiml = new twilio.twiml.VoiceResponse();
+
+  // Add Gather for speech recognition
+  const gather = twiml.gather({
+    input: ["speech"],
+    timeout: 5,
+    speechTimeout: "auto",
+    language: "en-US",
+    action: `${config.ngrokUrl}/twilio/process-response`,
+    method: "POST",
+  });
+
+  // TTS message to patient
+  gather.say(
+    {
+      voice: "Polly.Joanna", // or another voice
+    },
+    "Hello, this is a reminder from your healthcare provider to confirm your medications for the day. Please confirm if you have taken your Aspirin, Cardivol, and Metformin today.",
   );
 
-  if (CallStatus === "no-answer" || CallStatus === "busy") {
-    const message = `We called to check on your medication but couldn't reach you. Please call us back or take your medications if you haven't done so.`;
-    await sendSMS(To, message);
-    logger.info(`Sent SMS to ${To} due to missed call.`);
-  }
+  // If patient doesn't respond, handle fallback
+  twiml.redirect(`${config.ngrokUrl}/twilio/no-response`);
 
-  if (CallStatus === "completed" && RecordingUrl) {
-    const transcription = await transcribeAudio(RecordingUrl);
-    logger.info(`Patient Response Transcribed: "${transcription}"`);
-  }
-
-  res.status(200).send("Webhook received");
+  res.type("text/xml");
+  res.send(twiml.toString());
 };
 
-export const handleIncomingCall = async (req: Request, res: Response) => {
-  console.log("REQUEST BODY", req.body);
-  const { CallSid } = req.body;
+/**
+ * Processes patient's speech response
+ */
+export const processWebhookResponse = (req: Request, res: Response): void => {
+  const { SpeechResult, CallSid } = req.body;
 
-  logger.info(`Incoming call received - CallSid: ${CallSid}`);
+  // Log patient's response
+  logger.info(`Call ${CallSid} - Patient response: "${SpeechResult}"`);
 
-  const response = `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-  <Say voice="alice">${config.twilio.reminderMessage}</Say>
-  <Start>
-    <Stream url="wss://22d1-73-10-124-67.ngrok-free.app/twilio" track="both_tracks" />
-  </Start>
-</Response>
-`;
+  // Generate TwiML for thank you message
+  const twiml = new twilio.twiml.VoiceResponse();
+  twiml.say("Thank you for confirming. Have a great day!");
+  twiml.hangup();
 
-  res.set("Content-Type", "text/xml");
-  res.send(response);
+  res.type("text/xml");
+  res.send(twiml.toString());
 };
 
-export const handleRecordingStatus = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
-  try {
-    const { RecordingUrl, CallSid } = req.body;
+/**
+ * Handles scenario when patient doesn't respond to the prompt
+ */
+export const handleNoResponse = (req: Request, res: Response): void => {
+  const { CallSid, To, CallStatus, AnsweredBy } = req.body;
 
-    if (!RecordingUrl) {
-      logger.warn(`No RecordingUrl received for CallSid: ${CallSid}`);
-      res.status(400).json({ error: "No Recording URL provided." });
-    }
+  // Log if the call reached voicemail
+  if (AnsweredBy && AnsweredBy.includes("machine")) {
+    logger.info(`No response from ${To} (voicemail detected)`, {
+      callSid: CallSid,
+      answeredBy: AnsweredBy,
+    });
+  } else {
+    // Log if the user didn't respond (but didn't send to voicemail)
+    logger.info(`No response from ${To}`, {
+      callSid: CallSid,
+      status: CallStatus,
+    });
+  }
 
-    logger.info(
-      `Recording received for CallSid: ${CallSid} - URL: ${RecordingUrl}`
+  const twiml = new twilio.twiml.VoiceResponse();
+
+  // Leave a voicemail message
+  twiml.say(
+    "We called to check on your medication but couldn't reach you. Please call us back or take your medications if you haven't done so.",
+  );
+  twiml.hangup();
+
+  res.type("text/xml");
+  res.send(twiml.toString());
+};
+
+/**
+ * Handles audio stream from Twilio for real-time transcription
+ * This can be used for advanced transcription requirements
+ */
+export const handleAudioStream = (req: Request, res: Response): void => {
+  const streamSid = req.body.StreamSid || req.query.StreamSid;
+
+  if (!streamSid) {
+    logger.warn("Missing StreamSid in Twilio stream request");
+    res.status(400).json({ error: "Missing StreamSid" });
+    return;
+  }
+
+  logger.info(`Audio stream started for StreamSid: ${streamSid}`);
+
+  // Create WebSocket connection to Deepgram
+  const socket = new WebSocket("wss://api.deepgram.com/v1/listen", {
+    headers: {
+      Authorization: `Token ${config.deepgramApiKey}`,
+    },
+  });
+
+  // Configure Deepgram WebSocket
+  socket.on("open", () => {
+    logger.info(`Connected to Deepgram for StreamSid: ${streamSid}`);
+    socket.send(
+      JSON.stringify({
+        punctuate: true,
+        interim_results: false,
+        encoding: "mulaw",
+        sample_rate: 8000,
+        channels: 1,
+      }),
     );
+  });
 
-    // Append .mp3 if required by Deepgram
-    const formattedRecordingUrl = RecordingUrl.endsWith(".mp3")
-      ? RecordingUrl
-      : `${RecordingUrl}.mp3`;
+  // Process transcription results
+  socket.on("message", (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      if (response.channel?.alternatives?.[0]?.transcript) {
+        const transcript = response.channel.alternatives[0].transcript;
+        logger.info(`[Transcription] ${transcript}`);
+      }
+    } catch (error) {
+      logger.error("Error parsing Deepgram response:", error);
+    }
+  });
 
-    const transcription = await transcribeAudio(formattedRecordingUrl);
-    logger.info(`Transcription: "${transcription}"`);
+  // Handle errors and connection cleanup
+  socket.on("error", (error) => {
+    logger.error("WebSocket error:", error);
+  });
 
-    res
-      .status(200)
-      .json({ message: "Recording processed successfully", transcription });
-  } catch (error) {
-    logger.error("Error processing recording:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
+  socket.on("close", () => {
+    logger.info(`Deepgram connection closed for StreamSid: ${streamSid}`);
+  });
+
+  // Stream audio data to Deepgram
+  req.on("data", (chunk) => {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(chunk);
+    }
+  });
+
+  req.on("end", () => {
+    logger.info(`Twilio audio stream ended for StreamSid: ${streamSid}`);
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.close();
+    }
+    res.status(200).json({ message: "Audio stream processed" });
+  });
 };

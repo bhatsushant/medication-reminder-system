@@ -1,0 +1,24 @@
+### call user
+
+POST   https://your-ngrok-url/api/calls
+Content-Type: application/json
+
+{
+  "phoneNumber": "your-phoneNumber"
+}
+
+###
+POST https://your-ngrok-url/twilio/call-status
+Content-Type: application/json
+
+{
+  "key": "any"
+}
+
+###
+POST https://api.twilio.com/2010-04-01/Accounts/twilio-account-sid/Calls
+
+###
+GET  https://api.twilio.com/2010-04-01/Accounts/twilio-account-sid/Recordings/recording-id.mp3
+
+###

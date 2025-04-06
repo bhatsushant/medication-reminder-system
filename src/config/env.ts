@@ -1,20 +1,42 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-export const config = {
-  port: process.env.PORT || 3000,
-  twilio: {
-    accountSid: process.env.TWILIO_ACCOUNT_SID || "",
-    authToken: process.env.TWILIO_AUTH_TOKEN || "",
-    phoneNumber: process.env.TWILIO_PHONE_NUMBER || "",
-    reminderMessage:
-      "Hello, this is a reminder from your healthcare provider to confirm your medications. Have you taken Aspirin, Cardivol, and Metformin today?"
-  },
-  elevenLabs: {
-    apiKey: process.env.ELEVENLABS_API_KEY || "",
-    voiceId: process.env.ELEVENLABS_VOICE_ID || ""
-  },
-  deepgram: {
-    apiKey: process.env.DEEPGRAM_API_KEY || ""
+function validateEnv() {
+  const requiredEnvVars = [
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_PHONE_NUMBER",
+    "DEEPGRAM_API_KEY",
+    "NGROK_URL",
+  ];
+
+  const missingVars = requiredEnvVars.filter(
+    (variable) => !process.env[variable],
+  );
+
+  if (missingVars.length > 0) {
+    console.error(
+      `❌ Missing required environment variables: ${missingVars.join(", ")}`,
+    );
+    process.exit(1);
   }
+}
+
+// Validate environment variables
+validateEnv();
+
+// Export config with fallbacks
+export const config = {
+  port: parseInt(process.env.PORT || "3000"),
+  nodeEnv: process.env.NODE_ENV || "development",
+
+  twilioAccountSid: process.env.TWILIO_ACCOUNT_SID!,
+  twilioAuthToken: process.env.TWILIO_AUTH_TOKEN!,
+  twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER!,
+
+  deepgramApiKey: process.env.DEEPGRAM_API_KEY!,
+
+  elevenLabsApiKey: process.env.ELEVENLABS_API_KEY || "",
+
+  ngrokUrl: process.env.NGROK_URL!,
 };
