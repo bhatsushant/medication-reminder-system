@@ -7,6 +7,7 @@ import { CallLogModel } from "../models/callLog";
 export const handleOutgoingCall = async (req: Request, res: Response) => {
   const { To, CallSid } = req.body;
 
+  const twiml = new twilio.twiml.VoiceResponse();
   try {
     await CallLogModel.create({
       callSid: CallSid,
@@ -15,8 +16,6 @@ export const handleOutgoingCall = async (req: Request, res: Response) => {
       direction: "outbound",
       recordingUrl: ""
     });
-
-    const twiml = new twilio.twiml.VoiceResponse();
 
     const gather = twiml.gather({
       input: ["speech"],
@@ -34,7 +33,6 @@ export const handleOutgoingCall = async (req: Request, res: Response) => {
       },
       "Hello, this is a reminder from your healthcare provider to confirm your medications for the day. Please confirm if you have taken your Aspirin, Cardivol, and Metformin today."
     );
-  });
 
     twiml.redirect(`${config.ngrokUrl}/twilio/no-response`);
 
