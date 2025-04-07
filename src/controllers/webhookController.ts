@@ -16,7 +16,7 @@ export const handleOutgoingCall = async (req: Request, res: Response) => {
       recordingUrl: ""
     });
 
-    const twiml: twilio.twiml.VoiceResponse = new twilio.twiml.VoiceResponse();
+    const twiml = new twilio.twiml.VoiceResponse();
 
     const gather = twiml.gather({
       input: ["speech"],
