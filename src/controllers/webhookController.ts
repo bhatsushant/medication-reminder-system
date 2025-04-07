@@ -1,79 +1,73 @@
 import { Request, Response } from "express";
+import twilio from "twilio";
 import logger from "../config/logger";
-import { transcribeAudio } from "../services/stt";
-import { sendSMS } from "../services/twilioService";
 import { config } from "../config/env";
+import { CallLogModel } from "../models/callLog";
 
-export const handleCallStatus = async (req: Request, res: Response) => {
-  console.log("REQUEST BODY", req.body);
-  const { CallSid, CallStatus, RecordingUrl, To } = req.body;
+export const handleOutgoingCall = async (req: Request, res: Response) => {
+  const { To, CallSid } = req.body;
 
-  logger.info(
-    `Twilio Call Update - CallSid: ${CallSid}, Status: ${CallStatus}`
-  );
-
-  if (CallStatus === "no-answer" || CallStatus === "busy") {
-    const message = `We called to check on your medication but couldn't reach you. Please call us back or take your medications if you haven't done so.`;
-    await sendSMS(To, message);
-    logger.info(`Sent SMS to ${To} due to missed call.`);
-  }
-
-  if (CallStatus === "completed" && RecordingUrl) {
-    const transcription = await transcribeAudio(RecordingUrl);
-    logger.info(`Patient Response Transcribed: "${transcription}"`);
-  }
-
-  res.status(200).send("Webhook received");
-};
-
-export const handleIncomingCall = async (req: Request, res: Response) => {
-  console.log("REQUEST BODY", req.body);
-  const { CallSid } = req.body;
-
-  logger.info(`Incoming call received - CallSid: ${CallSid}`);
-
-  const response = `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-  <Say voice="alice">${config.twilio.reminderMessage}</Say>
-  <Start>
-    <Stream url="wss://22d1-73-10-124-67.ngrok-free.app/twilio" track="both_tracks" />
-  </Start>
-</Response>
-`;
-
-  res.set("Content-Type", "text/xml");
-  res.send(response);
-};
-
-export const handleRecordingStatus = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
   try {
-    const { RecordingUrl, CallSid } = req.body;
+    await CallLogModel.create({
+      callSid: CallSid,
+      phoneNumber: To,
+      callStatus: "initiated",
+      direction: "outbound",
+      recordingUrl: ""
+    });
 
-    if (!RecordingUrl) {
-      logger.warn(`No RecordingUrl received for CallSid: ${CallSid}`);
-      res.status(400).json({ error: "No Recording URL provided." });
-    }
+    const twiml = new twilio.twiml.VoiceResponse();
 
-    logger.info(
-      `Recording received for CallSid: ${CallSid} - URL: ${RecordingUrl}`
+    const gather = twiml.gather({
+      input: ["speech"],
+      speechModel: "deepgram_nova-2",
+      timeout: 5,
+      speechTimeout: "auto",
+      language: "en-US",
+      action: `${config.ngrokUrl}/twilio/process-response`,
+      method: "POST"
+    });
+
+    gather.say(
+      {
+        voice: "Polly.Joanna"
+      },
+      "Hello, this is a reminder from your healthcare provider to confirm your medications for the day. Please confirm if you have taken your Aspirin, Cardivol, and Metformin today."
     );
 
-    // Append .mp3 if required by Deepgram
-    const formattedRecordingUrl = RecordingUrl.endsWith(".mp3")
-      ? RecordingUrl
-      : `${RecordingUrl}.mp3`;
+    twiml.redirect(`${config.ngrokUrl}/twilio/no-response`);
 
-    const transcription = await transcribeAudio(formattedRecordingUrl);
-    logger.info(`Transcription: "${transcription}"`);
-
-    res
-      .status(200)
-      .json({ message: "Recording processed successfully", transcription });
+    res.type("text/xml");
+    res.send(twiml.toString());
   } catch (error) {
-    logger.error("Error processing recording:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    logger.error("Failed to create call log for outgoing call", {
+      error: error instanceof Error ? error.message : String(error),
+      callSid: CallSid
+    });
   }
+};
+
+export const processWebhookResponse = (req: Request, res: Response): void => {
+  const { SpeechResult, CallSid } = req.body;
+
+  logger.info(`Call ${CallSid} - Patient response: "${SpeechResult}"`);
+
+  const twiml = new twilio.twiml.VoiceResponse();
+  twiml.say("Thank you for confirming. Have a great day!");
+  twiml.hangup();
+
+  res.type("text/xml");
+  res.send(twiml.toString());
+};
+
+export const handleNoResponse = (req: Request, res: Response): void => {
+  const twiml = new twilio.twiml.VoiceResponse();
+
+  twiml.say(
+    "We called to check on your medication but couldn't reach you. Please call us back or take your medications if you haven't done so."
+  );
+  twiml.hangup();
+
+  res.type("text/xml");
+  res.send(twiml.toString());
 };

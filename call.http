@@ -1,0 +1,19 @@
+### call user
+
+POST https://your-ngrok-url/api/calls
+Content-Type: application/json
+
+{
+  "phoneNumber": "5516896959"
+}
+
+###
+POST https://your-ngrok-url/webhooks/twilio/call-status
+Content-Type: application/json
+
+{
+  "key": "Tanay"
+}
+
+###
+POST https://api.twilio.com/2010-04-01/Accounts/your-twilio-accont-sid/Calls
