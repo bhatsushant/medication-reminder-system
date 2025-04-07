@@ -138,7 +138,6 @@ export const processCallResponse = async (
     }
   }
 
-  // TODO: Process response using NLP service or simple keyword matching
   const response = analyzeSpeechResponse(SpeechResult);
 
   twiml.say(response);

@@ -22,7 +22,6 @@ export const handleCallStatus = async (
       actualTalkDuration: Duration
     });
   } else if (CallStatus === "no-answer" || CallStatus === "busy") {
-    // Call was not answered or line was busy
     logger.warning(`Patient ${To} did not answer or line was busy`, {
       callSid: CallSid,
       status: CallStatus

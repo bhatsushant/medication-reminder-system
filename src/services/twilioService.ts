@@ -1,15 +1,13 @@
 import { Twilio } from "twilio";
 import logger from "../config/logger";
+import { config } from "../config/env";
 
-const client = new Twilio(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+const client = new Twilio(config.twilioAccountSid, config.twilioAuthToken);
 
 export const makeCallWithAMD = async (phoneNumber: string): Promise<void> => {
   try {
-    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
-    const ngrokUrl = process.env.NGROK_URL;
+    const twilioPhoneNumber = config.twilioPhoneNumber;
+    const ngrokUrl = config.ngrokUrl;
 
     if (!twilioPhoneNumber || !ngrokUrl) {
       throw new Error(

@@ -35,7 +35,6 @@
     "mongodb": "^6.15.0",
     "pg": "^8.14.1",
     "twilio": "^5.5.1",
-    "vitest": "^3.0.9",
     "winston": "^3.17.0",
     "ws": "^8.18.1",
     "zod": "^3.24.2"
@@ -43,14 +42,15 @@
   "devDependencies": {
     "@prettier/plugin-xml": "^3.4.1",
     "@types/express": "^5.0.1",
-    "@types/node": "^22.14.0",
-    "@types/supertest": "^6.0.3",
+    "@types/node": "^22.13.14",
+    "@types/pg": "^8.11.11",
     "@types/twilio": "^3.19.2",
     "eslint": "^9.23.0",
     "nodemon": "^3.1.9",
     "prettier": "^3.5.3",
     "supertest": "^7.1.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.1"
   }
 }

@@ -16,7 +16,7 @@ export const handleOutgoingCall = async (req: Request, res: Response) => {
       recordingUrl: ""
     });
 
-    const twiml = new twilio.twiml.VoiceResponse();
+    const twiml: twilio.twiml.VoiceResponse = new twilio.twiml.VoiceResponse();
 
     const gather = twiml.gather({
       input: ["speech"],
@@ -34,6 +34,7 @@ export const handleOutgoingCall = async (req: Request, res: Response) => {
       },
       "Hello, this is a reminder from your healthcare provider to confirm your medications for the day. Please confirm if you have taken your Aspirin, Cardivol, and Metformin today."
     );
+  });
 
     twiml.redirect(`${config.ngrokUrl}/twilio/no-response`);
 
